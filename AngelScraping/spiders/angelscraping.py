@@ -37,38 +37,60 @@ class AngelScraper (scrapy.Spider):
 
     def parse_page(self, response):
 
-        col_links = response.xpath('//a[@class="frameImg"]/@href').extract()
+        col_links = response.xpath('//a[@class="u-unstyledLink"]/@href').extract()
 
         for c_link in col_links:
             if 'https' in c_link:
                 sub_link = c_link
             else:
                 sub_link = self.DOMAIN_URL + c_link
-            yield Request(url=sub_link, callback=self.parse_product, dont_filter=True, headers=self.headers)
+            yield Request(url=sub_link, callback=self.parse_company, dont_filter=True, headers=self.headers)
 
-    def parse_product(self, response):
+    def parse_company(self, response):
+
+        company_links = response.xpath('//h3//a/@href').extract()
+
+        for c_link in company_links:
+            if 'https' in c_link:
+                sub_link = c_link
+            else:
+                sub_link = self.DOMAIN_URL + c_link
+            yield Request(url=sub_link, callback=self.parse_founder, dont_filter=True, headers=self.headers)
+
+    def parse_founder(self, response):
+
+        founder_links = response.xpath('//h3//a/@href').extract()
+
+        for f_link in founder_links:
+            if 'https' in f_link:
+                sub_link = f_link
+            else:
+                sub_link = self.DOMAIN_URL + f_link
+            yield Request(url=sub_link, callback=self.parse_product_detail, dont_filter=True, headers=self.headers)
+
+    def parse_product_detail(self, response):
         product = SiteProductItem()
 
-        product_name = self._parse_name(response)
-        product['product_name'] = product_name
+        company_name = self._parse_company_name(response)
+        product['Company_Name'] = company_name
 
-        images = self._parse_images(response)
-        product['images'] = images
+        founders = self._parse_founders(response)
+        product['Names_of_Founders'] = founders
 
-        feature = self._parse_feature(response)
-        product['feature'] = feature
+        email = self._parse_email(response)
+        product['Email_Address'] = email
 
-        specification = self._parse_specification(response)
-        product['specification'] = specification
+        linkedin = self._parse_linkedinn(response)
+        product['Linkedin_URL'] = linkedin
 
         yield product
 
     @staticmethod
-    def _parse_name(response):
-        title = response.xpath('//title/text()').extract()
-        return title[0].strip() if title else None
+    def _parse_company_name(response):
+        company_name = response.xpath('//h1/text()').extract()
+        return company_name[0].strip() if company_name else None
 
-    def _parse_images(self, response):
+    def _parse_founders(self, response):
         images = []
         asset_images = response.xpath('//div[@class="frameImg"]//img/@data-lazy').extract()
         if asset_images:
@@ -78,11 +100,11 @@ class AngelScraper (scrapy.Spider):
         return images
 
     @staticmethod
-    def _parse_feature(response):
+    def _parse_email(response):
         features = response.xpath('//div[contains(@id,"Features")]//a[contains(@class, "btn-gold")]//text()').extract()
         return features
 
-    def _parse_specification(self, response):
+    def _parse_linkedinn(self, response):
         result = []
         t_header = response.xpath('//table[contains(@class, "table-striped")]/thead/tr/th/text()').extract()
         t_body = response.xpath('//table[contains(@class, "table-striped")]/div[contains(@class, "tablePar")]//tr').extract()
