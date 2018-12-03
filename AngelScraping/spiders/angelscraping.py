@@ -59,14 +59,17 @@ class AngelScraper (scrapy.Spider):
 
     def parse_founder(self, response):
 
-        founder_links = response.xpath('//h3//a/@href').extract()
+        founder_links = response.xpath('//a[@class="profile-link"]/@href').extract()
+        company_name = response.xpath('//h1//text()').extract()[0]
+        meta = {'company_name': company_name}
 
         for f_link in founder_links:
             if 'https' in f_link:
                 sub_link = f_link
             else:
                 sub_link = self.DOMAIN_URL + f_link
-            yield Request(url=sub_link, callback=self.parse_product_detail, dont_filter=True, headers=self.headers)
+            yield Request(url=sub_link, callback=self.parse_product_detail,
+                          dont_filter=True, meta=meta, headers=self.headers)
 
     def parse_product_detail(self, response):
         product = SiteProductItem()
@@ -74,24 +77,24 @@ class AngelScraper (scrapy.Spider):
         company_name = self._parse_company_name(response)
         product['Company_Name'] = company_name
 
-        founders = self._parse_founders(response)
-        product['Names_of_Founders'] = founders
+        founder_name = self._parse_founder_name(response)
+        product['Names_of_Founders'] = founder_name
 
         email = self._parse_email(response)
         product['Email_Address'] = email
 
-        linkedin = self._parse_linkedinn(response)
-        product['Linkedin_URL'] = linkedin
+        linked_in = self._parse_linkedin(response)
+        product['Linkedin_URL'] = linked_in
 
         yield product
 
     @staticmethod
     def _parse_company_name(response):
-        company_name = response.xpath('//h1/text()').extract()
+        company_name = response.meta['company_name']
         return company_name[0].strip() if company_name else None
 
-    def _parse_founders(self, response):
-        images = []
+    def _parse_founder_name(self, response):
+
         asset_images = response.xpath('//div[@class="frameImg"]//img/@data-lazy').extract()
         if asset_images:
             for image in asset_images:
@@ -104,7 +107,7 @@ class AngelScraper (scrapy.Spider):
         features = response.xpath('//div[contains(@id,"Features")]//a[contains(@class, "btn-gold")]//text()').extract()
         return features
 
-    def _parse_linkedinn(self, response):
+    def _parse_linkedin(self, response):
         result = []
         t_header = response.xpath('//table[contains(@class, "table-striped")]/thead/tr/th/text()').extract()
         t_body = response.xpath('//table[contains(@class, "table-striped")]/div[contains(@class, "tablePar")]//tr').extract()
