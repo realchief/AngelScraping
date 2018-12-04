@@ -16,6 +16,7 @@ class SiteProductItem(Item):
     Linkedin_URL = Field()
     Sales_Positions = Field()
     Location = Field()
+    Pay_Compensation_of_Job = Field()
 
 
 class AngelScraper (scrapy.Spider):
@@ -86,45 +87,50 @@ class AngelScraper (scrapy.Spider):
         linked_in = self._parse_linkedin(response)
         product['Linkedin_URL'] = linked_in
 
+        location = self._parse_location(response)
+        product['Location'] = location
+
+        Sales_Positions = self._parse_sales_position(response)
+        product['Sales_Positions'] = Sales_Positions
+
+        Pay_Compensation_of_Job = self._parse_pay_compensation(response)
+        product['Pay_Compensation_of_Job'] = Pay_Compensation_of_Job
+
         yield product
 
     @staticmethod
     def _parse_company_name(response):
         company_name = response.meta['company_name']
-        return company_name[0].strip() if company_name else None
+        return company_name.strip() if company_name else None
 
     def _parse_founder_name(self, response):
-
-        asset_images = response.xpath('//div[@class="frameImg"]//img/@data-lazy').extract()
-        if asset_images:
-            for image in asset_images:
-                image = self.DOMAIN_URL + image
-                images.append(image)
-        return images
+        founder_name = response.xpath('//h1/text()').extract()
+        return founder_name[0].strip() if founder_name else None
 
     @staticmethod
     def _parse_email(response):
-        features = response.xpath('//div[contains(@id,"Features")]//a[contains(@class, "btn-gold")]//text()').extract()
-        return features
+        email = None
+        assert_company_name = response.meta['company_name'].lower()
+        assert_founder_name = response.xpath('//h1/text()').extract()
+        if assert_company_name and assert_founder_name:
+            email = assert_founder_name[0].strip() + '@' + assert_company_name.strip() + '.com'
+        return email
 
     def _parse_linkedin(self, response):
-        result = []
-        t_header = response.xpath('//table[contains(@class, "table-striped")]/thead/tr/th/text()').extract()
-        t_body = response.xpath('//table[contains(@class, "table-striped")]/div[contains(@class, "tablePar")]//tr').extract()
-        if len(t_header) > 0:
-            for body in t_body:
-                spec = {}
-                tree_body = html.fromstring(body)
-                spec_body_vals = tree_body.xpath('//tr/td/text()')
+        linkedin_urls = response.xpath('//a[contains(@class, "fontello-linkedin")]/@href').extract()
+        return linkedin_urls[0].strip() if linkedin_urls else None
 
-                for i in range(0, len(t_header) - 1):
-                    spec_header = self._clean_text(t_header[i])
-                    if spec_body_vals:
-                        spec_body = self._clean_text(spec_body_vals[i])
-                        spec[spec_header] = spec_body
-                result.append(spec)
-        return result
+    def _parse_location(self, response):
+        personal_info = response.xpath('//a[contains(@class, "uncoloredLink")]/text()').extract()
+        return personal_info[1].strip() if personal_info else None
 
+    def _parse_sales_position(self, response):
+        personal_info = response.xpath('//a[contains(@class, "uncoloredLink")]/text()').extract()
+        return personal_info[0].strip() if personal_info else None
+
+    def _parse_pay_compensation(self, response):
+        payinfo = response.xpath('//div[contains(@class, "js-jobs-cta-banner")]//div[contains(@class, "u-inlineBlock")]/text()').extract()
+        return payinfo[0].strip() if payinfo else None
 
     @staticmethod
     def _clean_text(text):

@@ -14,6 +14,10 @@ BOT_NAME = 'AngelScraping'
 SPIDER_MODULES = ['AngelScraping.spiders']
 NEWSPIDER_MODULE = 'AngelScraping.spiders'
 
+# DOWNLOADER_MIDDLEWARES = {'scrapy_crawlera.CrawleraMiddleware': 610}
+# RAWLERA_ENABLED = True
+# CRAWLERA_APIKEY = '4d28ba7c36bd44d68a5b22de019ef428'
+
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 #USER_AGENT = 'AngelScraping (+http://www.yourdomain.com)'
